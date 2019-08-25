@@ -1,7 +1,10 @@
 /*[Station]*/
 rows=3;
 columns=3;
+// Could be made thinner but then you should add legs. Make sure the total height/thickness is 9 or more or else the switches will touch the ground.
 caseThickness=9;
+switch="MX"; // ["MX","ALPS"]
+showSwitch=false;
 
 /*[Legs]*/
 legs=false;
@@ -19,23 +22,39 @@ backPuzzle=true;
 
 
 /*[Danger zone]*/
+// Measured from key cap center to key cap center
 space=19.04;
-cutXSize=14;
-cutYSize=15;
-notchX=4;
-notchY=0.50;
-showSwitch=false;
 plateLength=space*1.089;
+
+/*[MX settings]*/
+MX_cutXSize=14;
+MX_cutYSize=15;
+MX_notchX=4;
+MX_notchY=0.50;
+
+/*[ALPS settings]*/
+ALPS_cutXSize=12.8;
+ALPS_cutYSize=16.0;
 
 function legZ(thickness,legHeight) = -(thickness*0.5+legHeight*0.5);
 
-module cherrySwitch(){
+module MXSwitch(){
 	// Awesome Cherry MX model created by gcb
 	// Lib: Cherry MX switch - reference
 	// Download here: https://www.thingiverse.com/thing:421524
 	//  p=cherrySize/2+0.53;
 	translate([0,0,13.2])
+  rotate([0,0,-90])
 		import("switch_mx.stl");
+}
+
+module ALPSSwitch(){
+  // ALPS model created by qwelyt (me)
+  // Lib: ALPS switch - reference
+  // Download here: https://www.thingiverse.com/thing:3829342
+  translate([0,0,-2])
+  rotate([0,0,0])
+  import("ALPS-switch.stl");
 }
 
 module leg(){
@@ -59,18 +78,22 @@ module KeyPlate(w=space,l=plateLength,h=caseThickness,center=true){
 	cube([w,l,h],center=center);
 }
 
-module KeyCut(thickness,x,y,notchX,notchY){
+module MXCut(thickness,x,y,MX_notchX,MX_notchY){
   union(){
     difference(){
       cube([x,y,thickness+2],center=true);
       
       translate([0,y/2,0])
-      cube([notchX,notchY,thickness+3],center=true);
+      cube([MX_notchX,MX_notchY,thickness+3],center=true);
       
       translate([0,-y/2,0])
-      cube([notchX,notchY,thickness+3],center=true);
+      cube([MX_notchX,MX_notchY,thickness+3],center=true);
     }
   }
+}
+
+module ALPSCut(thickness){
+  cube([ALPS_cutXSize,ALPS_cutYSize,thickness+2],center=true);
 }
 
 module puzzleCut(thickness,hook){
@@ -85,17 +108,30 @@ module puzzleCut(thickness,hook){
   }
 }
 
-module plate(rows, cols, thickness,space,cutX,cutY,notchX,notchY){
+module plate(){
    union(){
     for(r=[0:rows-1]){
-      for(c=[0:cols-1]){
+      for(c=[0:columns-1]){
         translate([space*r, space*c,0]){
           difference(){
             KeyPlate();
-            KeyCut(thickness,cutX,cutY,notchX,notchY);
+            if(switch == "MX"){
+              MXCut(caseThickness,MX_cutXSize,MX_cutYSize,MX_notchX,MX_notchY*2);
+            } else if(switch == "ALPS"){
+              ALPSCut(caseThickness);
+            } else {
+              cube([space*0.8,space*0.8,caseThickness+2],center=true);
+            }
           }
           if(showSwitch){
-            #translate([0,0,thickness/2])cherrySwitch();
+            if(switch == "MX"){
+              #translate([0,0,caseThickness/2])MXSwitch();
+            } else if(switch == "ALPS"){
+              #translate([0,0,caseThickness/2])ALPSSwitch();
+            } else {
+              #translate([0,0,caseThickness/2])
+              cube([space*0.8,space*0.8,caseThickness+2],center=true);
+            }
           }
           
           
@@ -105,46 +141,44 @@ module plate(rows, cols, thickness,space,cutX,cutY,notchX,notchY){
   }
 }
 
-module build(rows, cols, thickness,space,cutX,cutY,notchX,notchY){
+module build(){
   union(){
     if(puzzle){
       difference(){
-        plate(rows,cols,thickness,space,cutX,cutY,notchX,notchY);
+        plate();
         if(backPuzzle){
-          translate([0,-space*0.39,0])puzzleCut(thickness+2,false);
+          translate([0,-space*0.39,0])puzzleCut(caseThickness+2,false);
           
-          translate([space*(rows-1),-space*0.39,0])puzzleCut(thickness+2,false);
+          translate([space*(rows-1),-space*0.39,0])puzzleCut(caseThickness+2,false);
         }
     
         if(rightPuzzle){
-          translate([-space*0.346,0,0])rotate([0,0,-90])puzzleCut(thickness+2,false);
+          translate([-space*0.346,0,0])rotate([0,0,-90])puzzleCut(caseThickness+2,false);
           
-          translate([-space*0.346,space*(cols-1),0])rotate([0,0,-90])puzzleCut(thickness+2,false);
+          translate([-space*0.346,space*(cols-1),0])rotate([0,0,-90])puzzleCut(caseThickness+2,false);
         }
       }
       
       if(frontPuzzle){
-        translate([0,space*cols-space*0.3,0])puzzleCut(thickness,true);
+        translate([0,space*cols-space*0.3,0])puzzleCut(caseThickness,true);
         
-        translate([space*(rows-1),space*cols-space*0.3,0])puzzleCut(thickness,true);
+        translate([space*(rows-1),space*cols-space*0.3,0])puzzleCut(caseThickness,true);
       }
       
       if(leftPuzzle){
-        translate([space*rows-space*0.35,0,0])rotate([0,0,-90])puzzleCut(thickness,true);
+        translate([space*rows-space*0.35,0,0])rotate([0,0,-90])puzzleCut(caseThickness,true);
         
-        translate([space*rows-space*0.35,space*(cols-1),0])rotate([0,0,-90])puzzleCut(thickness,true);
+        translate([space*rows-space*0.35,space*(cols-1),0])rotate([0,0,-90])puzzleCut(caseThickness,true);
       }
       
     } else {
-      plate(rows,cols,thickness,space,cutX,cutY,notchX,notchY);
+      plate();
     }
  
     if(legs){
-      legs(thickness,rows-1,cols-1,0,0);
+      legs(caseThickness,rows-1,cols-1,0,0);
     }
   }
 }
 
-build(rows, columns, caseThickness, space,cutXSize,cutYSize,notchX,notchY*2);
-
-//puzzleCut(caseThickness,true);
+build();
